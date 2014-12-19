@@ -2,4 +2,4 @@
 
 <xtiles xmlns="http://www.xtiles.org/XML/ns/"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.xtiles.org/XML/ns/ xtiles-config.xsd"/>
+        xsi:schemaLocation="http://www.xtiles.org/XML/ns/ xtiles-config.xsd">zażółć gęślą jaźń</xtiles>

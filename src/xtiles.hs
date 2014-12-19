@@ -42,7 +42,7 @@ main = do
                         ] cfgFile
            >>>
            writeDocument [withIndent yes
-                         ,withOutputEncoding isoLatin1
+                         ,withOutputEncoding utf8
                          ] "-")
 
     putStrLnV $ "Program end."
