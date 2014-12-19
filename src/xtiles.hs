@@ -1,4 +1,5 @@
 import qualified System.Environment as Env (getArgs, getProgName)
+import Text.XML.HXT.Core
 
 ---------------------------------------------
 -- constants
@@ -35,3 +36,13 @@ main = do
                 _   -> error ("usage: " ++ prgName ++ " <config file>")
 
     putStrLnV $ "Using config file: " ++ cfgFile
+
+    _ <- runX ( readDocument [withValidate no
+                        --,withCurl []
+                        ] cfgFile
+           >>>
+           writeDocument [withIndent yes
+                         ,withOutputEncoding isoLatin1
+                         ] "-")
+
+    putStrLnV $ "Program end."

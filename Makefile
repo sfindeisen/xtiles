@@ -1,14 +1,25 @@
+DIST=dist
+BUILD=$(DIST)/build
+DOC=$(DIST)/doc
+SRC=src
+TMP=tmp
+
 .PHONY: default
 default: all
 
-.PHONY: all
-all: xtiles.out
+.PHONY: mkdirs
+mkdirs:
+	mkdir -p $(BUILD)
+	mkdir -p $(DOC)
 
-xtiles.out: xtiles.hs
-	ghc -XBangPatterns -Wall --make -o xtiles.out xtiles.hs
+.PHONY: all
+all: mkdirs $(BUILD)/xtiles.out
+
+$(BUILD)/xtiles.out: $(SRC)/xtiles.hs
+	ghc -XBangPatterns -Wall -odir $(TMP) -hidir $(TMP) --make -o $(BUILD)/xtiles.out $(SRC)/xtiles.hs
 
 .PHONY: clean
 clean:
-	rm xtiles.out
-	rm xtiles.hi
-	rm xtiles.o
+	@rm -v -rf $(DIST)
+	@rm -v $(TMP)/*.hi
+	@rm -v $(TMP)/*.o
