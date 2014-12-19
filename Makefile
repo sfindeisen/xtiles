@@ -9,8 +9,8 @@ default: all
 
 .PHONY: mkdirs
 mkdirs:
-	mkdir -p $(BUILD)
-	mkdir -p $(DOC)
+	@mkdir -p $(BUILD)
+	@mkdir -p $(DOC)
 
 .PHONY: all
 all: mkdirs $(BUILD)/xtiles.out
