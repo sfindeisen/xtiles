@@ -12,6 +12,12 @@ verbose = True
 -- xtiles
 ---------------------------------------------
 
+data TParamValue = TString (Maybe String) | TFile (Maybe String) | TInteger (Maybe Integer) deriving (Show)
+data TParam = Param {
+    name     :: String,
+    value    :: TParamValue
+} deriving (Show)
+
 ---------------------------------------------
 -- main program
 -- I/O should be in this section only!
