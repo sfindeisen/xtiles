@@ -1,3 +1,4 @@
+-- import qualified Data.Map as Map (Map)
 import qualified System.Environment as Env (getArgs, getProgName)
 import Text.XML.HXT.Core
 
@@ -12,11 +13,12 @@ verbose = True
 -- xtiles
 ---------------------------------------------
 
-data TParamValue = TString (Maybe String) | TFile (Maybe String) | TInteger (Maybe Integer) deriving (Show)
-data TParam = Param {
-    name     :: String,
-    value    :: TParamValue
-} deriving (Show)
+data TLiteral    = LString String | LInteger Integer | LBool Bool deriving (Eq, Show)
+data TFunCall    = FunCall { funcName :: String, funcParams :: [TExpr] } deriving (Show)
+-- data TTplCall    = TplCall {  tplName :: String,  tplParamBindings :: Map.Map String TExpr } deriving (Show)
+data TExpr       = TLiteral | Ident String | TFunCall | CmpEq TExpr TExpr deriving (Show)
+-- data TType       = TString | TInteger | TBool | TFile | TXPath | TXPathResult deriving (Eq, Show)
+-- data TParamDecl  = ParamDecl { pName :: String, pDefaultValue :: Maybe TExpr, pType :: TType }
 
 ---------------------------------------------
 -- main program
