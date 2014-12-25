@@ -14,11 +14,12 @@ verbose = True
 ---------------------------------------------
 
 data TLiteral    = LString String | LInteger Integer | LBool Bool deriving (Eq, Show)
+data TIdent      = Ident String
 data TFunCall    = FunCall { funcName :: String, funcParams :: [TExpr] } deriving (Show)
--- data TTplCall    = TplCall {  tplName :: String,  tplParamBindings :: Map.Map String TExpr } deriving (Show)
-data TExpr       = TLiteral | Ident String | TFunCall | CmpEq TExpr TExpr deriving (Show)
--- data TType       = TString | TInteger | TBool | TFile | TXPath | TXPathResult deriving (Eq, Show)
--- data TParamDecl  = ParamDecl { pName :: String, pDefaultValue :: Maybe TExpr, pType :: TType }
+data TExpr       = TLiteral | TIdent | TFunCall | CmpEq TExpr TExpr deriving (Show)
+
+-- type expressions are used with const/param declarations; TODO: elem list? attr list? nodeset?
+data TTypeExpr   = UTypeString | UTypeInteger | UTypeBool | UTypeFile | UTypeXPath deriving (Eq, Show)
 
 ---------------------------------------------
 -- main program
