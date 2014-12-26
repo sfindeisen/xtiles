@@ -1,4 +1,4 @@
--- import qualified Data.Map as Map (Map)
+import qualified Data.Map as Map (Map)
 import qualified System.Environment as Env (getArgs, getProgName)
 import Text.XML.HXT.Core
 
@@ -8,9 +8,9 @@ import Text.XML.HXT.Core
 
 verbose :: Bool
 verbose = True
-   
+
 ---------------------------------------------
--- xtiles
+-- expressions
 ---------------------------------------------
 
 data TLiteral    = LString String | LInteger Integer | LBool Bool deriving (Eq, Show)
@@ -20,6 +20,50 @@ data TExpr       = TLiteral | TIdent | TFunCall | CmpEq TExpr TExpr deriving (Sh
 
 -- type expressions are used with const/param declarations; TODO: elem list? attr list? nodeset?
 data TTypeExpr   = UTypeString | UTypeInteger | UTypeBool | UTypeFile | UTypeXPath deriving (Eq, Show)
+
+---------------------------------------------
+-- runtime
+---------------------------------------------
+
+data TStackFrame = StackFrame {
+    fileName :: String,
+    lineNo   :: Integer
+} deriving (Show)
+
+data TError = Error {
+    stack    :: [TStackFrame],
+    errorMsg :: String
+} deriving (Show)
+
+-- identifier binding
+data TIdentBinding = IdentBinding {
+    origExpr  :: TExpr,                            -- original expression
+    exprValue :: Either TError TRunValue           -- error or computed value
+} deriving (Show)
+
+-- processing phase; TODO is this necessary?...
+data TPhase = PhaseIORead | PhaseIOWrite
+
+-- identifier values
+data TRunValue = VString String | VInteger Integer | VBool Bool | VFile String deriving (Eq, Show)
+
+-- file contents
+data TFileContents = FileContents {
+    fileContentsStr :: Maybe String,
+    fileContentsXml :: Maybe XmlTree
+}
+
+data TRunState = RunState {
+    errorInfo    :: TError,
+    phase        :: TPhase,
+    identMap     :: Map.Map String TIdentBinding,               -- identifier name -> value
+    fileContents :: Map.Map String TFileContents                -- file name -> file contents
+}
+
+-- TODO
+processTemplate :: IOStateArrow TRunState XmlTree XmlTree
+processTemplate = validateDocument
+-- processTemplate state xmlTree = return (state, [xmlTree])
 
 ---------------------------------------------
 -- main program
