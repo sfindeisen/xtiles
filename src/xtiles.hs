@@ -1,6 +1,6 @@
 import qualified Data.Map as Map (Map)
 import qualified System.Environment as Env (getArgs, getProgName)
-import Text.XML.HXT.Core
+import           Text.XML.HXT.Core
 
 ---------------------------------------------
 -- constants
