@@ -66,7 +66,7 @@ processTemplate = validateDocument
 -- processTemplate state xmlTree = return (state, [xmlTree])
 
 ---------------------------------------------
---
+-- types
 -- TODO nasty things (does it have to be like this?):
 -- 1. lack of type unions (lots of nested constructors instead)
 -- 2. record field names must be unique globally?? => bad names
@@ -88,7 +88,6 @@ data TSelect = Select {
     svar   :: String
 } deriving (Show)
 
--- TODO nasty! does it have to be like this?
 data TMatchChild = MatchApplyTpl TApplyTpl | MatchCopy TCopy
   deriving (Show)
 
@@ -98,7 +97,6 @@ data TMatch = Match {
     mitems :: [TMatchChild]
 } deriving (Show)
 
--- TODO nasty! does it have to be like this?
 data TCreateChild = CreateSelect TSelect | CreateApplyTpl TApplyTpl
   deriving (Show)
 
@@ -114,13 +112,13 @@ data TCreate = Create {
 
 parseMatch :: IOSArrow XmlTree TMatch
 parseMatch =
-    getChildren
+    (getAttrValue "file") &&& ( getChildren
+                                >>>
+                                isElem >>> hasName "apply-template"
+                                >>>
+                                parseApplyTemplate)
     >>>
-    isElem >>> hasName "apply-template"
-    >>>
-    parseApplyTemplate
-    >>>
-    arr (\x -> Match { mfile="", mxpath="", mitems=[MatchApplyTpl x]})
+    arr (\(x,y) -> Match { mfile=x, mxpath="", mitems=[MatchApplyTpl y]})
 
 parseApplyTemplate :: IOSArrow XmlTree TApplyTpl
 parseApplyTemplate =
