@@ -66,9 +66,79 @@ processTemplate = validateDocument
 -- processTemplate state xmlTree = return (state, [xmlTree])
 
 ---------------------------------------------
--- main program
--- I/O should be in this section only!
+--
+-- TODO nasty things (does it have to be like this?):
+-- 1. lack of type unions (lots of nested constructors instead)
+-- 2. record field names must be unique globally?? => bad names
 ---------------------------------------------
+
+data TApplyTpl = ApplyTpl {
+    tpl :: String,
+    output :: String
+} deriving (Show)
+
+data TCopy = Copy {
+    src :: String,
+    dst :: String
+} deriving (Show)
+
+data TSelect = Select {
+    sfile  :: String,
+    sxpath :: String,
+    svar   :: String
+} deriving (Show)
+
+-- TODO nasty! does it have to be like this?
+data TMatchChild = MatchApplyTpl TApplyTpl | MatchCopy TCopy
+  deriving (Show)
+
+data TMatch = Match {
+    mfile  :: String,
+    mxpath :: String,
+    mitems :: [TMatchChild]
+} deriving (Show)
+
+-- TODO nasty! does it have to be like this?
+data TCreateChild = CreateSelect TSelect | CreateApplyTpl TApplyTpl
+  deriving (Show)
+
+data TCreate = Create {
+    cfile  :: String,
+    citems :: [TCreateChild]
+} deriving (Show)
+
+---------------------------------------------
+-- parser + main program
+-- I/O should be done in this section only!
+---------------------------------------------
+
+parseMatch :: IOSArrow XmlTree TMatch
+parseMatch =
+    getChildren
+    >>>
+    isElem >>> hasName "apply-template"
+    >>>
+    parseApplyTemplate
+    >>>
+    arr (\x -> Match { mfile="", mxpath="", mitems=[MatchApplyTpl x]})
+
+parseApplyTemplate :: IOSArrow XmlTree TApplyTpl
+parseApplyTemplate =
+    (getAttrValue "template") &&& (getAttrValue "output")
+    >>>
+    arr (\(x,y) -> ApplyTpl{tpl=x, output=y})
+
+parseConfigXML :: IOSArrow XmlTree TMatch
+parseConfigXML =
+    getChildren
+    >>>
+    isElem >>> hasName "xtiles-config"
+    >>>
+    getChildren
+    >>>
+    isElem >>> hasName "match"
+    >>>
+    parseMatch
 
 iov :: (String -> IO ()) -> String -> IO ()
 iov f s =

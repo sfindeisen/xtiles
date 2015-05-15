@@ -2,4 +2,31 @@
 
 <xtiles-config xmlns="http://www.xtiles.org/XML/ns/"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.xtiles.org/XML/ns/ xtiles-config.xsd">zażółć gęślą jaźń</xtiles-config>
+    xsi:schemaLocation="http://www.xtiles.org/XML/ns/ xtiles-config.xsd"
+    version="0.1">
+
+    <match file="post/*.xml" xpath="body/">
+        <!-- special variables (for each match): file, node -->
+        <apply-template template="tpl/post-layout.html" output="$basename(file)$-generated.html">
+            <insert name="body"     value="$node"/>
+            <insert name="date"     value="$current-date()"/>
+            <insert name="title"    value="$node/meta/title/text()"/>
+            <insert name="filename" value="$name(file)"/>
+        </apply-template>
+    </match>
+
+    <match file="css/*.css">
+        <copy src="$file" dst="out/css/$name(file)"/>
+    </match>
+
+    <create file="summary.html">
+        <select file="post/*.xml" xpath="meta/date/text()" as="x"/>
+        <!-- new variable: x is now a node-set -->
+
+        <apply-template template="tpl/post-summary.html">
+            <!-- no output file needed as it is already on create element level;
+                 inside the template we can use a node list! -->
+            <insert name="all-dates" value="$x"/>
+        </apply-template>
+    </create>
+</xtiles-config>
