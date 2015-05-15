@@ -160,12 +160,18 @@ main = do
 
     putStrLnV $ "Using config file: " ++ cfgFile
 
-    _ <- runX ( readDocument [withValidate no
-                        --,withCurl []
-                        ] cfgFile
-           >>>
-           writeDocument [withIndent yes
-                         ,withOutputEncoding utf8
-                         ] "-")
+    cfg <- runX (readDocument [ withValidate no ] cfgFile
+                 >>>
+                 parseConfigXML)
+
+    putStrLnV $ "got config: " ++ show cfg
+
+--    _ <- runX ( readDocument [withValidate no
+--                        --,withCurl []
+--                        ] cfgFile
+--           >>>
+--           writeDocument [withIndent yes
+--                         ,withOutputEncoding utf8
+--                         ] "-")
 
     putStrLnV $ "Program end."
