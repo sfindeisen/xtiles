@@ -75,10 +75,16 @@ processTemplate = validateDocument
 -- 2. record field names must be unique globally?? => bad names
 ---------------------------------------------
 
+data TParam = Param {
+    pnam :: String,
+    pval :: String
+} deriving (Show)
+
 data TApplyTpl = ApplyTpl {
     tpl    :: String,
     output :: Maybe String,
-    ovar   :: Maybe String
+    ovar   :: Maybe String,
+    params :: [TParam]
 } deriving (Show)
 
 data TCopy = Copy {
@@ -196,11 +202,17 @@ parseCopy =
 -- parse apply-template element (return a singleton list)
 parseApplyTemplate :: IOSArrow XmlTree TApplyTpl
 parseApplyTemplate =
-    (hasAttr "output" <+> hasAttr "var") >>. (take 1)
+    ((hasAttr "output") <+> (hasAttr "var")) >>. (take 1)
     >>>
-    ((parseMaybeAttr "output") &&& (parseMaybeAttr "var")) &&& (getAttrValue0 "template")
+    ((parseMaybeAttr "output") &&& (parseMaybeAttr "var") &&& (getAttrValue0 "template")
+     &&&
+     ((getChildren >>> isElem >>> hasName "param"
+      >>>
+      ((getAttrValue0 "name") &&& (getAttrValue0 "value"))
+      >>^
+      (\(x,y) -> Param {pnam=x, pval=y})) >. id))
     >>^
-    (\((x,y),z) -> ApplyTpl {tpl=z, output=x, ovar=y})
+    (\(u,(w,(x,z))) -> ApplyTpl {tpl=x, output=u, ovar=w, params=z})
 
 parseConfig :: IOSArrow XmlTree TConfig
 parseConfig =
@@ -227,6 +239,7 @@ parseConfigXML cfgFile = do
         h:_:_ -> error ("Config file format error: " ++ cfgFile)
         (h:_) -> do 
             putStrLnV $ "got config: " ++ show h
+            putStrLnV ""
             putStrV $ showConfig h
             return h
 
