@@ -114,6 +114,26 @@ data TConfig = Config {
     directives :: [TConfigChild]
 } deriving (Show)
 
+showMaybeStr :: Maybe String -> String
+showMaybeStr Nothing  = "-"
+showMaybeStr (Just s) = s
+
+showMatch :: TMatch -> String
+showMatch m = "Match file: " ++ (mfile m) ++ " xpath: " ++ (showMaybeStr $ mxpath m)
+
+showCreate :: TCreate -> String
+showCreate _ = "create"
+
+showCfgChild :: TConfigChild -> String
+showCfgChild (ConfigMatch  m) = showMatch m
+showCfgChild (ConfigCreate c) = showCreate c
+
+showConfig :: TConfig -> String
+showConfig c =
+    case directives c of
+      []    -> "No directive!"
+      (h:t) -> unlines $ map showCfgChild (h:t)
+
 ---------------------------------------------
 -- parser + main program
 -- I/O should be done in this section only!
@@ -143,8 +163,8 @@ parseApplyTemplate =
     >>^
     (\((x,y),z) -> ApplyTpl {tpl=z, output=x, ovar=y})
 
-parseConfigXML :: IOSArrow XmlTree TConfig
-parseConfigXML =
+parseConfig :: IOSArrow XmlTree TConfig
+parseConfig =
     ((getChildren
     >>>
     isElem >>> hasName "xtiles-config"
@@ -156,6 +176,20 @@ parseConfigXML =
     parseMatch >>^ ConfigMatch) >. id)
     >>^
     (\x -> Config {directives=x})
+
+parseConfigXML :: String -> IO TConfig
+parseConfigXML cfgFile = do
+    cfg <- runX (readDocument [ withValidate no ] cfgFile
+                 >>>
+                 parseConfig)
+
+    case cfg of
+        []    -> error ("Unable to read config file: " ++ cfgFile)
+        h:_:_ -> error ("Config file format error: " ++ cfgFile)
+        (h:_) -> do 
+            putStrLnV $ "got config: " ++ show h
+            putStrLnV $ showConfig h
+            return h
 
 iov :: (String -> IO ()) -> String -> IO ()
 iov f s =
@@ -176,19 +210,5 @@ main = do
                 _   -> error ("usage: " ++ prgName ++ " <config file>")
 
     putStrLnV $ "Using config file: " ++ cfgFile
-
-    cfg <- runX (readDocument [ withValidate no ] cfgFile
-                 >>>
-                 parseConfigXML)
-
-    putStrLnV $ "got config: " ++ show cfg
-
---    _ <- runX ( readDocument [withValidate no
---                        --,withCurl []
---                        ] cfgFile
---           >>>
---           writeDocument [withIndent yes
---                         ,withOutputEncoding utf8
---                         ] "-")
-
+    cfg <- parseConfigXML cfgFile
     putStrLnV $ "Program end."
