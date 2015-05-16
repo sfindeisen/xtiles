@@ -93,7 +93,7 @@ data TMatchChild = MatchApplyTpl TApplyTpl | MatchCopy TCopy
 
 data TMatch = Match {
     mfile  :: String,
-    mxpath :: String,
+    mxpath :: Maybe String,
     mitems :: [TMatchChild]
 } deriving (Show)
 
@@ -105,20 +105,28 @@ data TCreate = Create {
     citems :: [TCreateChild]
 } deriving (Show)
 
+data TConfigChild = ConfigMatch TMatch | ConfigCreate TCreate
+  deriving (Show)
+
+data TConfig = Config {
+    directives :: [TConfigChild]
+} deriving (Show)
+
 ---------------------------------------------
 -- parser + main program
 -- I/O should be done in this section only!
 ---------------------------------------------
 
+-- parse match element
 parseMatch :: IOSArrow XmlTree TMatch
 parseMatch =
-    (getAttrValue "file") &&& ( getChildren
-                                >>>
-                                isElem >>> hasName "apply-template"
-                                >>>
-                                parseApplyTemplate)
+    (getAttrValue0 "xpath") &&& ((getAttrValue0 "file") &&& ( getChildren
+                                                              >>>
+                                                              isElem >>> hasName "apply-template"
+                                                              >>>
+                                                              parseApplyTemplate))
     >>>
-    arr (\(x,y) -> Match { mfile=x, mxpath="", mitems=[MatchApplyTpl y]})
+    arr (\(x,(y,z)) -> Match { mfile=y, mxpath=(Just x), mitems=[MatchApplyTpl z]})
 
 parseApplyTemplate :: IOSArrow XmlTree TApplyTpl
 parseApplyTemplate =
@@ -126,7 +134,7 @@ parseApplyTemplate =
     >>>
     arr (\(x,y) -> ApplyTpl{tpl=x, output=y})
 
-parseConfigXML :: IOSArrow XmlTree TMatch
+parseConfigXML :: IOSArrow XmlTree TConfig
 parseConfigXML =
     getChildren
     >>>
@@ -137,6 +145,8 @@ parseConfigXML =
     isElem >>> hasName "match"
     >>>
     parseMatch
+    >>>
+    arr (\x -> Config {directives=[ConfigMatch x]})
 
 iov :: (String -> IO ()) -> String -> IO ()
 iov f s =
