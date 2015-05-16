@@ -116,7 +116,7 @@ data TCreateChild = CreateSelect TSelect | CreateApplyTpl TApplyTpl
   deriving (Show)
 
 data TCreate = Create {
-    cfile  :: String,
+    cfile  :: Maybe String,
     citems :: [TCreateChild]
 } deriving (Show)
 
@@ -143,6 +143,9 @@ showCopy c = "Copy: " ++ (src c) ++ " -> " ++ (dst c)
 showSave :: TSave -> String
 showSave c = "Save: " ++ (svvar c) ++ " -> " ++ (svfile c)
 
+showSelect :: TSelect -> String
+showSelect s = "Select: file: " ++ (sfile s) ++ " xpath: " ++ (sxpath s) ++ " var: " ++ (svar s)
+
 showMatchChild :: TMatchChild -> [String]
 showMatchChild (MatchApplyTpl a) = showApplyTpl a
 showMatchChild (MatchCopy c) = [showCopy c]
@@ -152,8 +155,13 @@ showMatch :: TMatch -> [String]
 showMatch m =
     ("Match file: " ++ (mfile m) ++ " xpath: " ++ (showMaybeStr $ mxpath m)) : (indent . concat $ map showMatchChild (mitems m))
 
+showCreateChild :: TCreateChild -> [String]
+showCreateChild (CreateApplyTpl a) = showApplyTpl a
+showCreateChild (CreateSelect s) = [showSelect s]
+
 showCreate :: TCreate -> [String]
-showCreate _ = ["create"]
+showCreate c =
+    ("Create file: " ++ (showMaybeStr $ cfile c)) : (indent . concat $ map showCreateChild (citems c))
 
 showCfgChild :: TConfigChild -> [String]
 showCfgChild (ConfigMatch  m) = showMatch m
@@ -168,15 +176,26 @@ showConfig c =
 ---------------------------------------------
 -- parser + main program
 -- I/O should be done in this section only!
+-- TODO parsing without IO (slurp XML first)
 ---------------------------------------------
 
 parseMaybeAttr :: String -> IOSArrow XmlTree (Maybe String)
 parseMaybeAttr s = withDefault (getAttrValue0 s >>^ Just) Nothing
 
+-- parse create element (return a singleton list)
+parseCreate :: IOSArrow XmlTree TCreate
+parseCreate =
+    (parseMaybeAttr "file") &&& ((getChildren >>> isElem >>>
+        ((hasName "select" >>> parseSelect >>^ CreateSelect)
+        <+>
+        (hasName "apply-template" >>> parseApplyTemplate >>^ CreateApplyTpl))) >. id)
+    >>^
+    (\(x,y) -> Create {cfile=x, citems=y})
+
 -- parse match element (return a singleton list)
 parseMatch :: IOSArrow XmlTree TMatch
 parseMatch =
-    ((parseMaybeAttr "xpath") &&& (getAttrValue0 "file"))
+    (parseMaybeAttr "xpath") &&& (getAttrValue0 "file")
         &&&
         ((getChildren >>> isElem >>>
           ((hasName "apply-template" >>> parseApplyTemplate >>^ MatchApplyTpl)
@@ -185,7 +204,7 @@ parseMatch =
             <+>
            (hasName "copy" >>> parseCopy >>^ MatchCopy))) >. id)
     >>^
-    (\((x,y),z) -> Match {mfile=y, mxpath=x, mitems=z})
+    (\(x,(y,z)) -> Match {mfile=y, mxpath=x, mitems=z})
 
 parseSave :: IOSArrow XmlTree TSave
 parseSave =
@@ -198,6 +217,12 @@ parseCopy =
     (getAttrValue0 "src") &&& (getAttrValue0 "dst")
     >>^
     (\(x,y) -> Copy {src=x, dst=y})
+
+parseSelect :: IOSArrow XmlTree TSelect
+parseSelect =
+    (getAttrValue0 "file") &&& (getAttrValue0 "xpath") &&& (getAttrValue0 "var")
+    >>^
+    (\(x,(y,z)) -> Select {sfile=x, sxpath=y, svar=z})
 
 -- parse apply-template element (return a singleton list)
 parseApplyTemplate :: IOSArrow XmlTree TApplyTpl
@@ -216,15 +241,12 @@ parseApplyTemplate =
 
 parseConfig :: IOSArrow XmlTree TConfig
 parseConfig =
-    ((getChildren
+    getChildren >>> isElem >>> hasName "xtiles-config" >>> ((getChildren >>> isElem
     >>>
-    isElem >>> hasName "xtiles-config"
-    >>>
-    getChildren
-    >>>
-    isElem >>> hasName "match"
-    >>>
-    parseMatch >>^ ConfigMatch) >. id)
+    ((hasName "match" >>> parseMatch >>^ ConfigMatch)
+      <+>   
+     (hasName "create" >>> parseCreate >>^ ConfigCreate)))
+    >. id)
     >>^
     (\x -> Config {directives=x})
 
@@ -234,12 +256,16 @@ parseConfigXML cfgFile = do
                  >>>
                  parseConfig)
 
+    putStrLnV $ "got config: " ++ show cfg
+    putStrLnV ""
+
+    --putStrV $ showConfig (cfg!!0)
+    --putStrV $ showConfig (cfg!!1)
+
     case cfg of
         []    -> error ("Unable to read config file: " ++ cfgFile)
         h:_:_ -> error ("Config file format error: " ++ cfgFile)
         (h:_) -> do 
-            putStrLnV $ "got config: " ++ show h
-            putStrLnV ""
             putStrV $ showConfig h
             return h
 

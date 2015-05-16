@@ -35,7 +35,7 @@
         <copy src="$file" dst="out/css/$name(file)"/>
     </match>
 
-    <!-- create a file (file is a required attribute) -->
+    <!-- create a file (file is an optional attribute) -->
     <create file="summary.html">
         <!-- select node sets from a bunch of files, TODO order by, concatenate, store in a variable -->
         <select file="post/*.xml" xpath="meta/date/text()" var="x"/>
