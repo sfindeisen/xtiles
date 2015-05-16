@@ -1,6 +1,7 @@
 import qualified Data.Map as Map (Map)
 import qualified System.Environment as Env (getArgs, getProgName)
 import           Text.XML.HXT.Core
+import           Control.Arrow.ArrowList
 
 ---------------------------------------------
 -- constants
@@ -73,8 +74,8 @@ processTemplate = validateDocument
 ---------------------------------------------
 
 data TApplyTpl = ApplyTpl {
-    tpl :: String,
-    output :: String
+    tpl    :: String,
+    output :: Maybe String
 } deriving (Show)
 
 data TCopy = Copy {
@@ -117,22 +118,22 @@ data TConfig = Config {
 -- I/O should be done in this section only!
 ---------------------------------------------
 
--- parse match element
+-- parse match element (return a singleton list)
 parseMatch :: IOSArrow XmlTree TMatch
 parseMatch =
-    (getAttrValue0 "xpath") &&& ((getAttrValue0 "file") &&& ( getChildren
+    (getAttrValue0 "xpath") &&& ((getAttrValue0 "file") &&& ((getChildren
                                                               >>>
                                                               isElem >>> hasName "apply-template"
                                                               >>>
-                                                              parseApplyTemplate))
-    >>>
-    arr (\(x,(y,z)) -> Match { mfile=y, mxpath=(Just x), mitems=[MatchApplyTpl z]})
+                                                              parseApplyTemplate >>^ MatchApplyTpl) >. id))
+    >>^
+    (\(x,(y,z)) -> Match { mfile=y, mxpath=(Just x), mitems=z})
 
 parseApplyTemplate :: IOSArrow XmlTree TApplyTpl
 parseApplyTemplate =
-    (getAttrValue "template") &&& (getAttrValue "output")
+    (getAttrValue0 "template") &&& (getAttrValue "output")
     >>>
-    arr (\(x,y) -> ApplyTpl{tpl=x, output=y})
+    arr (\(x,y) -> ApplyTpl {tpl=x, output=(Just y)})
 
 parseConfigXML :: IOSArrow XmlTree TConfig
 parseConfigXML =
