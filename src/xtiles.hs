@@ -1,7 +1,5 @@
-import qualified Data.Map as Map (Map)
 import qualified System.Environment as Env (getArgs, getProgName)
 import           Text.XML.HXT.Core
-import           Control.Arrow.ArrowList
 
 ---------------------------------------------
 -- constants
@@ -14,6 +12,7 @@ verbose = True
 -- expressions
 ---------------------------------------------
 
+{-
 data TLiteral    = LString String | LInteger Integer | LBool Bool deriving (Eq, Show)
 data TIdent      = Ident String
 data TFunCall    = FunCall { funcName :: String, funcParams :: [TExpr] } deriving (Show)
@@ -21,11 +20,13 @@ data TExpr       = TLiteral | TIdent | TFunCall | CmpEq TExpr TExpr deriving (Sh
 
 -- type expressions are used with const/param declarations; TODO: elem list? attr list? nodeset?
 data TTypeExpr   = UTypeString | UTypeInteger | UTypeBool | UTypeFile | UTypeXPath deriving (Eq, Show)
+-}
 
 ---------------------------------------------
 -- runtime
 ---------------------------------------------
 
+{-
 data TStackFrame = StackFrame {
     fileName :: String,
     lineNo   :: Integer
@@ -65,6 +66,7 @@ data TRunState = RunState {
 processTemplate :: IOStateArrow TRunState XmlTree XmlTree
 processTemplate = validateDocument
 -- processTemplate state xmlTree = return (state, [xmlTree])
+-}
 
 ---------------------------------------------
 -- types
@@ -84,13 +86,18 @@ data TCopy = Copy {
     dst :: String
 } deriving (Show)
 
+data TSave = Save {
+    svvar  :: String,
+    svfile :: String
+} deriving (Show)
+
 data TSelect = Select {
     sfile  :: String,
     sxpath :: String,
     svar   :: String
 } deriving (Show)
 
-data TMatchChild = MatchApplyTpl TApplyTpl | MatchCopy TCopy
+data TMatchChild = MatchApplyTpl TApplyTpl | MatchCopy TCopy | MatchSave TSave
   deriving (Show)
 
 data TMatch = Match {
@@ -114,25 +121,43 @@ data TConfig = Config {
     directives :: [TConfigChild]
 } deriving (Show)
 
+indent :: [String] -> [String]
+indent = map ("  "++)
+
 showMaybeStr :: Maybe String -> String
 showMaybeStr Nothing  = "-"
 showMaybeStr (Just s) = s
 
-showMatch :: TMatch -> String
-showMatch m = "Match file: " ++ (mfile m) ++ " xpath: " ++ (showMaybeStr $ mxpath m)
+showApplyTpl :: TApplyTpl -> [String]
+showApplyTpl a = ["Apply-Template: " ++ (tpl a) ++ " -> file: " ++ (showMaybeStr $ output a) ++ " var: " ++ (showMaybeStr $ ovar a)]
 
-showCreate :: TCreate -> String
-showCreate _ = "create"
+showCopy :: TCopy -> String
+showCopy c = "Copy: " ++ (src c) ++ " -> " ++ (dst c)
 
-showCfgChild :: TConfigChild -> String
+showSave :: TSave -> String
+showSave c = "Save: " ++ (svvar c) ++ " -> " ++ (svfile c)
+
+showMatchChild :: TMatchChild -> [String]
+showMatchChild (MatchApplyTpl a) = showApplyTpl a
+showMatchChild (MatchCopy c) = [showCopy c]
+showMatchChild (MatchSave s) = [showSave s]
+
+showMatch :: TMatch -> [String]
+showMatch m =
+    ("Match file: " ++ (mfile m) ++ " xpath: " ++ (showMaybeStr $ mxpath m)) : (indent . concat $ map showMatchChild (mitems m))
+
+showCreate :: TCreate -> [String]
+showCreate _ = ["create"]
+
+showCfgChild :: TConfigChild -> [String]
 showCfgChild (ConfigMatch  m) = showMatch m
 showCfgChild (ConfigCreate c) = showCreate c
 
 showConfig :: TConfig -> String
 showConfig c =
     case directives c of
-      []    -> "No directive!"
-      (h:t) -> unlines $ map showCfgChild (h:t)
+      []    -> "Config is empty!"
+      (h:t) -> unlines . indent . concat $ map showCfgChild (h:t)
 
 ---------------------------------------------
 -- parser + main program
@@ -145,19 +170,33 @@ parseMaybeAttr s = withDefault (getAttrValue0 s >>^ Just) Nothing
 -- parse match element (return a singleton list)
 parseMatch :: IOSArrow XmlTree TMatch
 parseMatch =
-    (((withDefault (getAttrValue0 "xpath" >>^ Just) Nothing) &&& (getAttrValue0 "file"))
+    ((parseMaybeAttr "xpath") &&& (getAttrValue0 "file"))
         &&&
-        ((getChildren
-          >>>
-          isElem >>> hasName "apply-template"
-          >>>
-          parseApplyTemplate >>^ MatchApplyTpl) >. id))
+        ((getChildren >>> isElem >>>
+          ((hasName "apply-template" >>> parseApplyTemplate >>^ MatchApplyTpl)
+            <+>
+           (hasName "save" >>> parseSave >>^ MatchSave)
+            <+>
+           (hasName "copy" >>> parseCopy >>^ MatchCopy))) >. id)
     >>^
     (\((x,y),z) -> Match {mfile=y, mxpath=x, mitems=z})
 
+parseSave :: IOSArrow XmlTree TSave
+parseSave =
+    (getAttrValue0 "src") &&& (getAttrValue0 "file")
+    >>^
+    (\(x,y) -> Save {svvar=x, svfile=y})
+
+parseCopy :: IOSArrow XmlTree TCopy
+parseCopy =
+    (getAttrValue0 "src") &&& (getAttrValue0 "dst")
+    >>^
+    (\(x,y) -> Copy {src=x, dst=y})
+
+-- parse apply-template element (return a singleton list)
 parseApplyTemplate :: IOSArrow XmlTree TApplyTpl
 parseApplyTemplate =
-    (hasAttr "output" <+> hasAttr "var")
+    (hasAttr "output" <+> hasAttr "var") >>. (take 1)
     >>>
     ((parseMaybeAttr "output") &&& (parseMaybeAttr "var")) &&& (getAttrValue0 "template")
     >>^
@@ -179,7 +218,7 @@ parseConfig =
 
 parseConfigXML :: String -> IO TConfig
 parseConfigXML cfgFile = do
-    cfg <- runX (readDocument [ withValidate no ] cfgFile
+    cfg <- runX (readDocument [withValidate no] cfgFile
                  >>>
                  parseConfig)
 
@@ -188,7 +227,7 @@ parseConfigXML cfgFile = do
         h:_:_ -> error ("Config file format error: " ++ cfgFile)
         (h:_) -> do 
             putStrLnV $ "got config: " ++ show h
-            putStrLnV $ showConfig h
+            putStrV $ showConfig h
             return h
 
 iov :: (String -> IO ()) -> String -> IO ()
@@ -197,6 +236,9 @@ iov f s =
         f s
     else
         return ()
+
+putStrV :: String -> IO ()
+putStrV = iov putStr
 
 putStrLnV :: String -> IO ()
 putStrLnV = iov putStrLn

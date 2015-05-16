@@ -23,7 +23,7 @@
         <save src="post" file="post/simple/$basename(file)$.html"/>
 
         <!-- apply another template, store the result directly in a file -->
-        <apply-template template="tpl/default-layout.html" output="post/$basename(file)$.html">
+        <apply-template template="tpl/default-layout.html" output="post/$basename(file)$.html" var="y">
             <param name="body"     value="$post"/>
             <param name="title"    value="my title"/>
         </apply-template>
