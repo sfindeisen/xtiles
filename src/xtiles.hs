@@ -75,7 +75,8 @@ processTemplate = validateDocument
 
 data TApplyTpl = ApplyTpl {
     tpl    :: String,
-    output :: Maybe String
+    output :: Maybe String,
+    ovar   :: Maybe String
 } deriving (Show)
 
 data TCopy = Copy {
@@ -118,26 +119,33 @@ data TConfig = Config {
 -- I/O should be done in this section only!
 ---------------------------------------------
 
+parseMaybeAttr :: String -> IOSArrow XmlTree (Maybe String)
+parseMaybeAttr s = withDefault (getAttrValue0 s >>^ Just) Nothing
+
 -- parse match element (return a singleton list)
 parseMatch :: IOSArrow XmlTree TMatch
 parseMatch =
-    (getAttrValue0 "xpath") &&& ((getAttrValue0 "file") &&& ((getChildren
-                                                              >>>
-                                                              isElem >>> hasName "apply-template"
-                                                              >>>
-                                                              parseApplyTemplate >>^ MatchApplyTpl) >. id))
+    (((withDefault (getAttrValue0 "xpath" >>^ Just) Nothing) &&& (getAttrValue0 "file"))
+        &&&
+        ((getChildren
+          >>>
+          isElem >>> hasName "apply-template"
+          >>>
+          parseApplyTemplate >>^ MatchApplyTpl) >. id))
     >>^
-    (\(x,(y,z)) -> Match { mfile=y, mxpath=(Just x), mitems=z})
+    (\((x,y),z) -> Match {mfile=y, mxpath=x, mitems=z})
 
 parseApplyTemplate :: IOSArrow XmlTree TApplyTpl
 parseApplyTemplate =
-    (getAttrValue0 "template") &&& (getAttrValue "output")
+    (hasAttr "output" <+> hasAttr "var")
     >>>
-    arr (\(x,y) -> ApplyTpl {tpl=x, output=(Just y)})
+    ((parseMaybeAttr "output") &&& (parseMaybeAttr "var")) &&& (getAttrValue0 "template")
+    >>^
+    (\((x,y),z) -> ApplyTpl {tpl=z, output=x, ovar=y})
 
 parseConfigXML :: IOSArrow XmlTree TConfig
 parseConfigXML =
-    getChildren
+    ((getChildren
     >>>
     isElem >>> hasName "xtiles-config"
     >>>
@@ -145,9 +153,9 @@ parseConfigXML =
     >>>
     isElem >>> hasName "match"
     >>>
-    parseMatch
-    >>>
-    arr (\x -> Config {directives=[ConfigMatch x]})
+    parseMatch >>^ ConfigMatch) >. id)
+    >>^
+    (\x -> Config {directives=x})
 
 iov :: (String -> IO ()) -> String -> IO ()
 iov f s =
