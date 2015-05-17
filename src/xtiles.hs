@@ -263,11 +263,10 @@ parseConfigXML cfgFile = do
     --putStrV $ showConfig (cfg!!1)
 
     case cfg of
-        []    -> error ("Unable to read config file: " ++ cfgFile)
-        h:_:_ -> error ("Config file format error: " ++ cfgFile)
-        (h:_) -> do 
+        [h] -> do 
             putStrV $ showConfig h
             return h
+        _ -> error ("Config file format error: " ++ cfgFile)
 
 iov :: (String -> IO ()) -> String -> IO ()
 iov f s =
