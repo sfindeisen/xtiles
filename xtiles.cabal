@@ -1,0 +1,20 @@
+Name:    xtiles
+Version: 0.1
+
+Synopsis: A static website generator (XML based)
+
+License-File: LICENSE
+Author:       Stanislaw Findeisen
+
+Cabal-Version: >= 1.10
+Build-Type:    Simple
+
+Executable xtiles
+  Default-Language: Haskell2010
+  Ghc-options:      -Wall
+  Hs-source-dirs:   src
+  Main-is:          xtiles.hs
+
+  Build-depends:
+    base      == 4.*,
+    hxt       >= 9.3.1.1

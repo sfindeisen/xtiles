@@ -16,7 +16,9 @@ mkdirs:
 all: mkdirs $(BUILD)/xtiles.out
 
 $(BUILD)/xtiles.out: $(SRC)/xtiles.hs
-	ghc -XBangPatterns -Wall -odir $(TMP) -hidir $(TMP) --make -o $(BUILD)/xtiles.out $(SRC)/xtiles.hs
+	cabal configure
+	cabal build
+	# ghc -XBangPatterns -Wall -odir $(TMP) -hidir $(TMP) --make -o $(BUILD)/xtiles.out $(SRC)/xtiles.hs
 
 .PHONY: clean
 clean:

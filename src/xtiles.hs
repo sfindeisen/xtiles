@@ -1,5 +1,6 @@
 import qualified System.Environment as Env (getArgs, getProgName)
 import           Text.XML.HXT.Core
+-- import           Text.XML.HXT.Arrow.ReadDocument (xreadDoc)
 
 ---------------------------------------------
 -- constants
@@ -179,11 +180,11 @@ showConfig c =
 -- TODO parsing without IO (slurp XML first)
 ---------------------------------------------
 
-parseMaybeAttr :: String -> IOSArrow XmlTree (Maybe String)
+parseMaybeAttr :: (ArrowXml a) => String -> a XmlTree (Maybe String)
 parseMaybeAttr s = withDefault (getAttrValue0 s >>^ Just) Nothing
 
 -- parse create element (return a singleton list)
-parseCreate :: IOSArrow XmlTree TCreate
+parseCreate :: (ArrowXml a) => a XmlTree TCreate
 parseCreate =
     (parseMaybeAttr "file") &&& ((getChildren >>> isElem >>>
         ((hasName "select" >>> parseSelect >>^ CreateSelect)
@@ -193,7 +194,7 @@ parseCreate =
     (\(x,y) -> Create {cfile=x, citems=y})
 
 -- parse match element (return a singleton list)
-parseMatch :: IOSArrow XmlTree TMatch
+parseMatch :: (ArrowXml a) => a XmlTree TMatch
 parseMatch =
     (parseMaybeAttr "xpath") &&& (getAttrValue0 "file")
         &&&
@@ -206,26 +207,26 @@ parseMatch =
     >>^
     (\(x,(y,z)) -> Match {mfile=y, mxpath=x, mitems=z})
 
-parseSave :: IOSArrow XmlTree TSave
+parseSave :: (ArrowXml a) => a XmlTree TSave
 parseSave =
     (getAttrValue0 "src") &&& (getAttrValue0 "file")
     >>^
     (\(x,y) -> Save {svvar=x, svfile=y})
 
-parseCopy :: IOSArrow XmlTree TCopy
+parseCopy :: (ArrowXml a) => a XmlTree TCopy
 parseCopy =
     (getAttrValue0 "src") &&& (getAttrValue0 "dst")
     >>^
     (\(x,y) -> Copy {src=x, dst=y})
 
-parseSelect :: IOSArrow XmlTree TSelect
+parseSelect :: (ArrowXml a) => a XmlTree TSelect
 parseSelect =
     (getAttrValue0 "file") &&& (getAttrValue0 "xpath") &&& (getAttrValue0 "var")
     >>^
     (\(x,(y,z)) -> Select {sfile=x, sxpath=y, svar=z})
 
 -- parse apply-template element (return a singleton list)
-parseApplyTemplate :: IOSArrow XmlTree TApplyTpl
+parseApplyTemplate :: (ArrowXml a) => a XmlTree TApplyTpl
 parseApplyTemplate =
     ((hasAttr "output") <+> (hasAttr "var")) >>. (take 1)
     >>>
@@ -239,7 +240,7 @@ parseApplyTemplate =
     >>^
     (\(u,(w,(x,z))) -> ApplyTpl {tpl=x, output=u, ovar=w, params=z})
 
-parseConfig :: IOSArrow XmlTree TConfig
+parseConfig :: (ArrowXml a) => a XmlTree TConfig
 parseConfig =
     getChildren >>> isElem >>> hasName "xtiles-config" >>> ((getChildren >>> isElem
     >>>
@@ -250,23 +251,34 @@ parseConfig =
     >>^
     (\x -> Config {directives=x})
 
-parseConfigXML :: String -> IO TConfig
-parseConfigXML cfgFile = do
-    cfg <- runX (readDocument [withValidate no] cfgFile
-                 >>>
-                 parseConfig)
+-- parse config from XML String
+parseConfigXML :: String -> TConfig
+parseConfigXML cfgStr =
+    let cfg = runLA (xreadDoc >>> parseConfig) cfgStr
+    in
+        case cfg of
+            [h] -> h
+            _ -> error "Config error"
 
-    putStrLnV $ "got config: " ++ show cfg
-    putStrLnV ""
+--    cfg <- runX (readDocument [withValidate no] cfgFile
+--                 >>>
+--                 parseConfig)
+--    cfg <- xreadDoc cfgFile >>> parseConfig
+
+--    xmlDoc <- readDocument [withValidate no] cfgFile
+--    cfg <- parseConfig xmlDoc
+
+--    putStrLnV $ "got config: " ++ show cfg
+--    putStrLnV ""
 
     --putStrV $ showConfig (cfg!!0)
     --putStrV $ showConfig (cfg!!1)
 
-    case cfg of
-        [h] -> do 
-            putStrV $ showConfig h
-            return h
-        _ -> error ("Config file format error: " ++ cfgFile)
+--    case cfg of
+--        [h] -> do 
+--            putStrV $ showConfig h
+--            return h
+--        _ -> error ("Config file format error: " ++ cfgFile)
 
 iov :: (String -> IO ()) -> String -> IO ()
 iov f s =
@@ -290,5 +302,9 @@ main = do
                 _   -> error ("usage: " ++ prgName ++ " <config file>")
 
     putStrLnV $ "Using config file: " ++ cfgFile
-    cfg <- parseConfigXML cfgFile
+    cfgXml <- readFile cfgFile
+    putStrLnV $ "config file contents: " ++ cfgXml
+    let cfg = parseConfigXML cfgXml
+    putStrLnV $ "config: " ++ showConfig cfg
     putStrLnV $ "Program end."
+
