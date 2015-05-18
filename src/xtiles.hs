@@ -68,6 +68,12 @@ processTemplate = validateDocument
 -- processTemplate state xmlTree = return (state, [xmlTree])
 -}
 
+---------------------------------------------
+-- parser + main program
+-- I/O should be done in this section only!
+-- TODO parsing without IO (slurp XML first)
+---------------------------------------------
+
 iov :: (String -> IO ()) -> String -> IO ()
 iov f s =
     if verbose then

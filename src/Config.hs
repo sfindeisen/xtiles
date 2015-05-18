@@ -110,12 +110,6 @@ showConfig c =
       []    -> "Config is empty!"
       (h:t) -> unlines . indent . concat $ map showCfgChild (h:t)
 
----------------------------------------------
--- parser + main program
--- I/O should be done in this section only!
--- TODO parsing without IO (slurp XML first)
----------------------------------------------
-
 parseMaybeAttr :: (ArrowXml a) => String -> a XmlTree (Maybe String)
 parseMaybeAttr s = withDefault (getAttrValue0 s >>^ Just) Nothing
 
