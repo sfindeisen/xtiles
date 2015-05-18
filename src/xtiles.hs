@@ -242,7 +242,9 @@ parseApplyTemplate =
 
 parseConfig :: (ArrowXml a) => a XmlTree TConfig
 parseConfig =
-    getChildren >>> isElem >>> hasName "xtiles-config" >>> ((getChildren >>> isElem
+    -- When using readDocument, we must start with getChildren >>>
+    -- This is not the case with xreadDoc
+    isElem >>> hasName "xtiles-config" >>> ((getChildren >>> isElem
     >>>
     ((hasName "match" >>> parseMatch >>^ ConfigMatch)
       <+>   
@@ -258,7 +260,8 @@ parseConfigXML cfgStr =
     in
         case cfg of
             [h] -> h
-            _ -> error "Config error"
+            []  -> error "Config error (no root)"
+            _   -> error "Config error (multiple roots)"
 
 --    cfg <- runX (readDocument [withValidate no] cfgFile
 --                 >>>
@@ -303,7 +306,7 @@ main = do
 
     putStrLnV $ "Using config file: " ++ cfgFile
     cfgXml <- readFile cfgFile
-    putStrLnV $ "config file contents: " ++ cfgXml
+    -- putStrLnV $ "config file: " ++ cfgXml
     let cfg = parseConfigXML cfgXml
     putStrLnV $ "config: " ++ showConfig cfg
     putStrLnV $ "Program end."
