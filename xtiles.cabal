@@ -14,6 +14,7 @@ Executable xtiles
   Ghc-options:      -Wall
   Hs-source-dirs:   src
   Main-is:          xtiles.hs
+  Other-Modules:    Config
 
   Build-depends:
     base      == 4.*,
