@@ -1,5 +1,7 @@
 <ol>
-<li><a href="hobbies.html"XTILES:if current_page()="hobbies.html" then >> class="highlighted"<</XTILES>Hobbies</a></li>
-<li><a href="links.html">Links</a></li>
-<li><a href="contact.html">Contact</a></li>
+<li><a href="hobbies.html"<?xtiles if current_page=="hobbies.html" then ?> class="highlighted"<?xtiles end ?>>Hobbies</a></li>
+<li><a href="links.html"<?xtiles if current_page=="links.html" then ?> class="highlighted"<?xtiles end ?>>Links</a></li>
+<li><a href="contact.html"<?xtiles if current_page=="contact.html" then ?> class="highlighted"<?xtiles end ?>>Contact</a></li>
+<li><a href="about.html"<?xtiles if current_page=="about.html" then ?> class="highlighted"<?xtiles end ?>>About</a></li>
+<li><a href="blog.html"<?xtiles if current_page=="blog.html" then ?> class="highlighted"<?xtiles end ?>>Blog</a></li>
 </ol>

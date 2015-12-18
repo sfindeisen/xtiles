@@ -1,1 +1,0 @@
-parent("template.html").place("body", this).place("footer", "Special footer for hobbies: I also like skiing!")

@@ -1,0 +1,9 @@
+<h2>Blog entries</h2>
+
+<h3>Polish entries</h3>
+
+<ol>
+<?xtiles for i in blog/entry*.xml:entry/lang/[text()="pl"] do ?>
+<li><a href="blog/<?xtiles= i.name() ?>"><?xtiles= i/entry/title ?></a></li>
+<?xtiles end ?>
+</ol>

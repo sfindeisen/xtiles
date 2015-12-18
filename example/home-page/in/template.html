@@ -3,15 +3,15 @@
 <table>
 <tr>
 <td>
-XTILES:"<h3>select item</h3>" + contents("menu.html")/XTILES
+<?xtiles="<h3>select item</h3>" + file("menu.html").to_string() ?>
 </td>
 </tr>
 <tr>
 <td>
-XTILES:placeholder("body")/XTILES
+<?xtiles placeholder("body") ?>
 </td>
 </tr>
 </table>
 
 <hr/>
-XTILES:placeholder("footer", "footer.html")/XTILES
+<?xtiles placeholder("footer", "footer.html") ?>

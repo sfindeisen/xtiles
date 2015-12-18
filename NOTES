@@ -1,0 +1,16 @@
+Types
+=====
+
+* Boolean
+
+if current_page="hobbies.html" then ...
+
+* String
+
+file("menu.html").to_string()
+template(file("template.html")).put("body", this).put("footer", "Special footer for hobbies: I also like skiing!").to_string()
+
+Placeholders
+============
+
+placeholder("footer", "footer.html")
