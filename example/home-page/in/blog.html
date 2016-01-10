@@ -1,9 +1,21 @@
 <h2>Blog entries</h2>
 
+<ol>
+<?xtiles for i in blog/entry*.xml do ?>
+<li><a href="blog/<?xtiles= i.basename() ?>.html"><?xtiles= i/entry/title ?></a></li>
+<?xtiles end ?>
+</ol>
+
+<ol>
+<?xtiles select blog/entry*.xml as entry order by entry.basename() ?>
+<li><a href="blog/<?xtiles= i.basename() ?>.html"><?xtiles= i/entry/title ?></a></li>
+<?xtiles end ?>
+</ol>
+
 <h3>Polish entries</h3>
 
 <ol>
 <?xtiles for i in blog/entry*.xml:entry/lang/[text()="pl"] do ?>
-<li><a href="blog/<?xtiles= i.name() ?>"><?xtiles= i/entry/title ?></a></li>
+<li><a href="blog/<?xtiles= i.basename() ?>.html"><?xtiles= i/entry/title ?></a></li>
 <?xtiles end ?>
 </ol>

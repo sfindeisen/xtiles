@@ -1,0 +1,11 @@
+match blog/entry*.xml as entry =>
+    # A template expression:
+    template(file("blog-entry.html")).put("body", entry/body).put("title", entry/title)
+end
+
+match ["about.html", "hobbies.html", "links.html", "contact.html", "blog.html"] as f =>
+    let
+        tpl = template(file("main.html")).put("body", f)
+    in
+        match "about
+end
